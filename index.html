@@ -21,10 +21,10 @@ button{border:0;border-radius:9px;padding:8px;font-weight:800;margin:2px;backgro
 </style>
 </head>
 <body>
-<header><h1>🌊 MARINE TRICK</h1><div class="sub">20枚デッキ・CPU対戦プロトタイプ</div>
-<div class="stats"><span class="pill" id="who"></span><span class="pill" id="round"></span><span class="pill" id="counts"></span></div></header>
+<header><h1>🌊 MARINE TRICK</h1><div class="sub">20枚デッキ・3体撃破ルール</div>
+<div class="stats"><span class="pill" id="who"></span><span class="pill" id="round"></span><span class="pill" id="score"></span><span class="pill" id="counts"></span></div></header>
 <main>
-<div class="hint">キャラは1ターン1体まで。攻撃は1ターン1回。合体技・サポートは手札のカードを使い、使用後は捨て札へ。</div>
+<div class="hint">先に相手キャラを3体倒した方が勝ち！ キャラは1ターン1体まで。攻撃は1ターン1回。合体技・サポートは手札のカードを使い、使用後は捨て札へ。</div>
 <section class="panel"><b>🤖 CPUの場</b><div class="board" id="eb"></div></section>
 <section class="panel"><b>🙂 あなたの場</b><div class="board" id="pb"></div><div class="center" id="attackButtons"></div></section>
 <section class="panel"><b>🃏 あなたの手札</b><div class="hand" id="hand"></div></section>
@@ -33,12 +33,12 @@ button{border:0;border-radius:9px;padding:8px;font-weight:800;margin:2px;backgro
 </main>
 <script>
 const chars=[
- {key:"A",name:"マロン",hp:120,atk:30,recoil:10},
- {key:"A",name:"マロン",hp:120,atk:30,recoil:10},
- {key:"B",name:"ルウ",hp:120,atk:20,recoil:0},
- {key:"B",name:"ルウ",hp:120,atk:20,recoil:0},
- {key:"C",name:"タケシ",hp:120,atk:10,recoil:0,heal:10},
- {key:"C",name:"タケシ",hp:120,atk:10,recoil:0,heal:10}
+ {key:"A",name:"マロン",hp:120,atk:40,recoil:10},
+ {key:"A",name:"マロン",hp:120,atk:40,recoil:10},
+ {key:"B",name:"ルウ",hp:120,atk:30,recoil:0},
+ {key:"B",name:"ルウ",hp:120,atk:30,recoil:0},
+ {key:"C",name:"タケシ",hp:120,atk:20,recoil:0,heal:10},
+ {key:"C",name:"タケシ",hp:120,atk:20,recoil:0,heal:10}
 ];
 const combo=[
  {type:"combo",need:["A","B"],name:"A＋B 2人技",dmg:60},
@@ -68,7 +68,7 @@ let S,pending=null;
 function L(s){let e=document.getElementById("log");e.innerHTML+=s+"<br>";e.scrollTop=e.scrollHeight}
 function draw(side,n){for(let i=0;i<n;i++){if(side.deck.length)side.hand.push(side.deck.pop())}}
 function newGame(){
- S={turn:"p",round:1,gameOver:false,
+ S={turn:"p",round:1,gameOver:false,pKO:0,eKO:0,
  p:{deck:makeDeck("p"),hand:[],board:[],discard:[],summoned:false,attacked:false,power:0,defend:0},
  e:{deck:makeDeck("e"),hand:[],board:[],discard:[],summoned:false,attacked:false,power:0,defend:0}};
  pending=null;document.getElementById("log").innerHTML="";draw(S.p,4);draw(S.e,4);L("対戦開始！ 初期手札4枚。");render();
@@ -86,7 +86,7 @@ function render(){
  board("eb",S.e.board,true);board("pb",S.p.board,false);
  document.getElementById("who").textContent=S.turn==="p"?"あなたのターン":"CPUのターン";
  document.getElementById("round").textContent="第"+S.round+"ターン";
- document.getElementById("counts").textContent=`山札 ${S.p.deck.length} / 捨て札 ${S.p.discard.length}`;
+ document.getElementById("score").textContent=`撃破 あなた ${S.pKO}/3 ｜ CPU ${S.eKO}/3`;document.getElementById("counts").textContent=`山札 ${S.p.deck.length} / 捨て札 ${S.p.discard.length}`;
  document.getElementById("end").disabled=S.turn!=="p"||S.gameOver;
  let h=document.getElementById("hand");h.innerHTML="";
  S.p.hand.forEach(c=>{
@@ -122,9 +122,12 @@ function target(uid){
  S.p.attacked=true;pending=null;clean();render();
 }
 function clean(){
- [["p","あなた"],["e","CPU"]].forEach(([k,n])=>{let s=S[k];let dead=s.board.filter(x=>x.cur<=0);dead.forEach(x=>{L(`${n}の${x.name}は倒れた！`);s.discard.push(x)});s.board=s.board.filter(x=>x.cur>0)});
- if(S.e.deck.length===0&&S.e.hand.length===0&&S.e.board.length===0){S.gameOver=true;L("🎉 あなたの勝ち！")}
- if(S.p.deck.length===0&&S.p.hand.length===0&&S.p.board.length===0){S.gameOver=true;L("CPUの勝ち！")}
+ let pDead=S.p.board.filter(x=>x.cur<=0), eDead=S.e.board.filter(x=>x.cur<=0);
+ pDead.forEach(x=>{L(`あなたの${x.name}は倒れた！`);S.p.discard.push(x);S.eKO++});
+ eDead.forEach(x=>{L(`CPUの${x.name}は倒れた！`);S.e.discard.push(x);S.pKO++});
+ S.p.board=S.p.board.filter(x=>x.cur>0);S.e.board=S.e.board.filter(x=>x.cur>0);
+ if(S.pKO>=3){S.gameOver=true;pending=null;L("🎉 3体撃破！ あなたの勝ち！")}
+ else if(S.eKO>=3){S.gameOver=true;pending=null;L("💀 3体撃破されました。CPUの勝ち！")}
 }
 function endTurn(){if(S.turn!=="p"||S.gameOver)return;pending=null;S.turn="e";render();setTimeout(cpuTurn,400)}
 function cpuTurn(){
