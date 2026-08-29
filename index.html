@@ -21,10 +21,10 @@ button{border:0;border-radius:9px;padding:8px;font-weight:800;margin:2px;backgro
 </style>
 </head>
 <body>
-<header><h1>🌊 MARINE TRICK</h1><div class="sub">20枚デッキ・全滅ルール追加版</div>
+<header><h1>🌊 MARINE TRICK</h1><div class="sub">20枚デッキ・サポート1枚制</div>
 <div class="stats"><span class="pill" id="who"></span><span class="pill" id="round"></span><span class="pill" id="score"></span><span class="pill" id="counts"></span></div></header>
 <main>
-<div class="hint">勝利条件：相手を3体倒す、または相手の場を0体にする。初期手札には必ずキャラ1枚以上。最初のターンは必ずキャラを1体出す。キャラは1ターン1体まで。攻撃は1ターン1回。合体技・サポートは手札のカードを使い、使用後は捨て札へ。</div>
+<div class="hint">勝利条件：相手を3体倒す、または相手の場を0体にする。初期手札には必ずキャラ1枚以上。最初のターンは必ずキャラを1体出す。1ターンに「キャラ1体まで・サポート1枚まで・攻撃1回まで」。合体技はサポートに含まず、攻撃1回として扱います。</div>
 <section class="panel"><b>🤖 CPUの場</b><div class="board" id="eb"></div></section>
 <section class="panel"><b>🙂 あなたの場</b><div class="board" id="pb"></div><div class="center" id="attackButtons"></div></section>
 <section class="panel"><b>🃏 あなたの手札</b><div class="hand" id="hand"></div></section>
@@ -82,8 +82,8 @@ function openingHand(side){
 }
 function newGame(){
  S={turn:"p",round:1,gameOver:false,pKO:0,eKO:0,
- p:{deck:makeDeck("p"),hand:[],board:[],discard:[],summoned:false,attacked:false,power:0,defend:0},
- e:{deck:makeDeck("e"),hand:[],board:[],discard:[],summoned:false,attacked:false,power:0,defend:0}};
+ p:{deck:makeDeck("p"),hand:[],board:[],discard:[],summoned:false,attacked:false,supported:false,power:0,defend:0},
+ e:{deck:makeDeck("e"),hand:[],board:[],discard:[],summoned:false,attacked:false,supported:false,power:0,defend:0}};
  pending=null;document.getElementById("log").innerHTML="";
  openingHand(S.p);openingHand(S.e);
  L("対戦開始！ 初期手札4枚には必ずキャラが1枚以上入ります。最初のターンはキャラを出してください。");render();
@@ -108,6 +108,7 @@ function render(){
    let dis=S.turn!=="p"||S.gameOver;
    if(c.type==="char")dis=dis||S.p.summoned||S.p.board.length>=3;
    if(c.type==="combo"||c.type==="triple")dis=dis||S.p.attacked||!hasNeed(S.p.board,c.need);
+   if(!["char","combo","triple"].includes(c.type))dis=dis||S.p.supported;
    let cls=c.type==="char"?"charCard":(c.type==="combo"||c.type==="triple"?"comboCard":"supportCard");
    let txt=c.type==="char"?`HP120 / 通常${c.atk}`:(c.dmg?`${c.dmg}ダメージ`:c.text);
    h.innerHTML+=`<button class="cardbtn ${cls}" ${dis?"disabled":""} onclick="playCard('${c.id}')"><b>${c.name}</b>${txt}</button>`;
@@ -121,11 +122,11 @@ function playCard(id){
  let i=S.p.hand.findIndex(x=>x.id===id);if(i<0)return;let c=S.p.hand[i];
  if(c.type==="char"){if(S.p.summoned||S.p.board.length>=3)return;S.p.hand.splice(i,1);c.cur=c.hp;c.uid="pc"+Math.random();S.p.board.push(c);S.p.summoned=true;L(`あなた：${c.name}を場に出した。`)}
  else if(c.type==="combo"||c.type==="triple"){if(S.p.attacked||!hasNeed(S.p.board,c.need))return;pending={kind:"card",card:c,damage:c.dmg,label:c.name};}
- else if(c.type==="draw"){S.p.hand.splice(i,1);S.p.discard.push(c);draw(S.p,2);L("あなた：全力でいこう！ 山札から2枚引いた。")}
- else if(c.type==="power"){S.p.hand.splice(i,1);S.p.discard.push(c);S.p.power+=10;L("あなた：パワーアップ！ 次の攻撃+10。")}
- else if(c.type==="heal"){let t=alive(S.p.board).sort((a,b)=>a.cur-b.cur)[0];if(!t)return;S.p.hand.splice(i,1);S.p.discard.push(c);t.cur=Math.min(t.hp,t.cur+20);L(`あなた：いやしのしずく！ ${t.name}を20回復。`)}
- else if(c.type==="defend"){S.p.hand.splice(i,1);S.p.discard.push(c);S.p.defend=20;L("あなた：守りを固めろ！ 次に受けるダメージを20軽減。")}
- else if(c.type==="guard"){S.p.hand.splice(i,1);S.p.discard.push(c);L("あなた：かばう！ ※この試作ではCPUの攻撃対象を最もHPの高い味方へ変更。");S.p.guard=true}
+ else if(c.type==="draw"){S.p.supported=true;S.p.hand.splice(i,1);S.p.discard.push(c);draw(S.p,2);L("あなた：全力でいこう！ 山札から2枚引いた。")}
+ else if(c.type==="power"){S.p.supported=true;S.p.hand.splice(i,1);S.p.discard.push(c);S.p.power+=10;L("あなた：パワーアップ！ 次の攻撃+10。")}
+ else if(c.type==="heal"){S.p.supported=true;let t=alive(S.p.board).sort((a,b)=>a.cur-b.cur)[0];if(!t)return;S.p.hand.splice(i,1);S.p.discard.push(c);t.cur=Math.min(t.hp,t.cur+20);L(`あなた：いやしのしずく！ ${t.name}を20回復。`)}
+ else if(c.type==="defend"){S.p.supported=true;S.p.hand.splice(i,1);S.p.discard.push(c);S.p.defend=20;L("あなた：守りを固めろ！ 次に受けるダメージを20軽減。")}
+ else if(c.type==="guard"){S.p.supported=true;S.p.hand.splice(i,1);S.p.discard.push(c);L("あなた：かばう！ ※この試作ではCPUの攻撃対象を最もHPの高い味方へ変更。");S.p.guard=true}
  render();
 }
 function normal(uid){let c=alive(S.p.board).find(x=>x.uid===uid);if(!c||S.p.attacked)return;pending={kind:"normal",actor:c,damage:c.atk,label:`${c.name}の通常攻撃`};render()}
@@ -153,10 +154,19 @@ function endTurn(){
 }
 function cpuTurn(){
  let e=S.e,p=S.p;e.summoned=false;e.attacked=false;draw(e,1);
- // CPU support: simple legal choices
- let d=e.hand.find(x=>x.type==="draw");if(d){e.hand.splice(e.hand.indexOf(d),1);e.discard.push(d);draw(e,2);L("CPU：全力でいこう！ 2枚ドロー。")}
+ // CPU support: at most ONE support card per turn.
+ e.supported=false;
+ let supportPlayed=false;
  let heal=e.hand.find(x=>x.type==="heal");let hurt=alive(e.board).sort((a,b)=>a.cur-b.cur)[0];
- if(heal&&hurt&&hurt.cur<=80){e.hand.splice(e.hand.indexOf(heal),1);e.discard.push(heal);hurt.cur=Math.min(hurt.hp,hurt.cur+20);L(`CPU：いやしのしずく！ ${hurt.name}を20回復。`)}
+ if(!supportPlayed&&heal&&hurt&&hurt.cur<=80){
+   e.hand.splice(e.hand.indexOf(heal),1);e.discard.push(heal);hurt.cur=Math.min(hurt.hp,hurt.cur+20);
+   e.supported=true;supportPlayed=true;L(`CPU：いやしのしずく！ ${hurt.name}を20回復。`);
+ }
+ let d=e.hand.find(x=>x.type==="draw");
+ if(!supportPlayed&&d){
+   e.hand.splice(e.hand.indexOf(d),1);e.discard.push(d);draw(e,2);
+   e.supported=true;supportPlayed=true;L("CPU：全力でいこう！ 2枚ドロー。");
+ }
  if(e.board.length<3){let c=e.hand.find(x=>x.type==="char");if(c){e.hand.splice(e.hand.indexOf(c),1);c.cur=c.hp;c.uid="ec"+Math.random();e.board.push(c);e.summoned=true;L(`CPU：${c.name}を場に出した。`)}}
  let targets=alive(p.board);
  if(targets.length){
@@ -175,7 +185,7 @@ function cpuTurn(){
    }
  }
  clean();if(S.gameOver){render();return}
- S.turn="p";S.round++;S.p.summoned=false;S.p.attacked=false;draw(S.p,1);L("あなたのターン。1枚ドロー！");render();
+ S.turn="p";S.round++;S.p.summoned=false;S.p.attacked=false;S.p.supported=false;draw(S.p,1);L("あなたのターン。1枚ドロー！");render();
 }
 newGame();
 </script></body></html>
