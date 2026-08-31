@@ -35,7 +35,7 @@
    <hr style="border:0;border-top:1px solid #ccb9e7;margin:12px 0">
    <b>✏️ 登録カード一覧</b>
    <div id="adminEditor"></div>
-   <div class="setupActions"><button onclick="try{saveAdmin()}catch(e){alert(e.message)}">管理設定を保存</button><button onclick="resetAdmin()">初期カードに戻す</button><button class="danger" onclick="clearImages();renderAdmin()">登録画像を全削除</button></div>
+   <div class="setupActions"><button onclick="try{saveAdmin()}catch(e){alert(e.message)}">管理設定を保存</button><button style="background:#d07a19" onclick="try{exportPublicHTML()}catch(e){alert('書き出しに失敗しました：'+e.message)}">📦 公開用HTMLを書き出す</button><button onclick="resetAdmin()">初期カードに戻す</button><button class="danger" onclick="clearImages();renderAdmin()">登録画像を全削除</button></div>
  </div>
 </div>
 <details open><summary>🃏 デッキ編成</summary><p class="small">デッキ枚数は下で自由に変更できます。2人合体技・3人合体技は各1枚まで。カード画像の登録・変更・削除は管理モードから行います。</p><div style="margin:8px 0"><b>デッキ枚数：</b><input id="deckSize" type="number" min="10" max="60" value="20" style="width:75px" onchange="setDeckSize(this.value)"> 枚 <span class="small">（10〜60枚）</span></div><div id="deckEditor"></div><div class="setupActions"><span id="deckCount" class="deckok"></span> <button onclick="resetDeck()">初期編成</button> <button id="startBtn" onclick="newGame()">このデッキで対戦開始</button></div></details>
@@ -49,6 +49,7 @@
 <section class="panel"><b>対戦ログ</b><div class="log" id="log"></div></section>
 </div></main>
 <script>
+const EMBEDDED_EXPORT_STATE=null;
 const DEFAULT_CARD_POOL=[
  {code:'marron',type:'char',key:'A',attr:'rock',name:'マロン',hp:120,atk:40,recoil:10,defaultCount:2,max:4},
  {code:'rou',type:'char',key:'B',attr:'scissors',name:'ルウ',hp:120,atk:30,defaultCount:2,max:4},
@@ -64,7 +65,8 @@ const DEFAULT_CARD_POOL=[
  {code:'defend',type:'defend',name:'守りを固めろ！',text:'次に受けるダメージ-20',defaultCount:2,max:4}
 ];
 let CARD_POOL=JSON.parse(JSON.stringify(DEFAULT_CARD_POOL));
-try{
+if(EMBEDDED_EXPORT_STATE&&Array.isArray(EMBEDDED_EXPORT_STATE.cardPool)){CARD_POOL=JSON.parse(JSON.stringify(EMBEDDED_EXPORT_STATE.cardPool));}
+else try{
  const savedPool=JSON.parse(localStorage.getItem('marineTrickCardPoolV6')||'null');
  if(Array.isArray(savedPool)&&savedPool.length) CARD_POOL=savedPool;
 }catch(e){}
@@ -87,10 +89,10 @@ try{
 CARD_POOL.forEach(c=>{if(c.type==='char'&&!c.attr)c.attr='rock';if(c.type==='combo'||c.type==='triple'){if(!c.comboMode)c.comboMode='specific';if(c.sacrifice==null)c.sacrifice=0;if(c.type==='combo'&&!c.needAttrs)c.needAttrs=['rock','scissors'];}});
 CARD_POOL.forEach(c=>{if((c.type==='combo'||c.type==='triple')&&(!Array.isArray(c.branches)||!c.branches.length))c.branches=[legacyBranch(c)]});
 let deckCounts={},images={},S=null,pending=null;
-let deckSize=Number(localStorage.getItem('marineTrickDeckSizeV2')||20);
+let deckSize=EMBEDDED_EXPORT_STATE?Number(EMBEDDED_EXPORT_STATE.deckSize||20):Number(localStorage.getItem('marineTrickDeckSizeV2')||20);
 function setDeckSize(v){deckSize=Math.max(10,Math.min(60,Number(v)||20));localStorage.setItem('marineTrickDeckSizeV2',deckSize);document.getElementById('deckSize').value=deckSize;validateDeck()}
-try{images=JSON.parse(localStorage.getItem('marineTrickImagesV2')||'{}')}catch(e){images={}}
-try{deckCounts=JSON.parse(localStorage.getItem('marineTrickDeckV2')||'{}')}catch(e){deckCounts={}}
+if(EMBEDDED_EXPORT_STATE){images=JSON.parse(JSON.stringify(EMBEDDED_EXPORT_STATE.images||{}));deckCounts=JSON.parse(JSON.stringify(EMBEDDED_EXPORT_STATE.deckCounts||{}));}
+else{try{images=JSON.parse(localStorage.getItem('marineTrickImagesV2')||'{}')}catch(e){images={}}try{deckCounts=JSON.parse(localStorage.getItem('marineTrickDeckV2')||'{}')}catch(e){deckCounts={}}}
 CARD_POOL.forEach(c=>{if(deckCounts[c.code]==null)deckCounts[c.code]=c.defaultCount});
 
 let adminOpen=false;
@@ -188,6 +190,18 @@ function saveAdmin(){
  });
  persistPool();localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));
  renderEditor();renderAdmin();alert('カード設定を保存しました。');
+}
+function exportPublicHTML(){
+ if(adminOpen){saveAdminForExport()}
+ const state={version:1,exportedAt:new Date().toISOString(),cardPool:JSON.parse(JSON.stringify(CARD_POOL)),images:JSON.parse(JSON.stringify(images)),deckCounts:JSON.parse(JSON.stringify(deckCounts)),deckSize:Number(deckSize)};
+ const stateJSON=JSON.stringify(state).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
+ let html='<!doctype html>\n'+document.documentElement.outerHTML;
+ html=html.replace(/const EMBEDDED_EXPORT_STATE=(?:null|\{[\s\S]*?\});/,'const EMBEDDED_EXPORT_STATE='+stateJSON+';');
+ const blob=new Blob([html],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='index.html';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ alert('現在の設定と画像を埋め込んだ index.html を書き出しました。');
+}
+function saveAdminForExport(){
+ CARD_POOL.forEach(c=>{let nameEl=document.getElementById('adm_name_'+c.code);if(nameEl&&nameEl.value.trim())c.name=nameEl.value.trim();let maxEl=document.getElementById('adm_max_'+c.code);if(maxEl)c.max=Math.max(0,Math.min(20,Number(maxEl.value)||0));c.effects=readEffects('adm_'+c.code);if(c.type==='char'){c.attr=document.getElementById('adm_attr_'+c.code)?.value||c.attr||'rock';c.hp=Math.max(10,Math.min(999,Number(document.getElementById('adm_hp_'+c.code)?.value)||c.hp));c.atk=Math.max(0,Math.min(999,Number(document.getElementById('adm_atk_'+c.code)?.value)||0));}else if(c.dmg!=null){c.branches=captureBranches(c);let first=c.branches[0];c.dmg=first.dmg;c.comboMode=first.mode;c.sacrifice=first.sacrifice;c.need=first.need;if(c.type==='combo')c.needAttrs=first.needAttrs;c.effects=first.effects;}if((deckCounts[c.code]||0)>c.max)deckCounts[c.code]=c.max;});
 }
 function deleteCard(code){
  let c=CARD_POOL.find(x=>x.code===code);if(!c)return;
