@@ -13,12 +13,6 @@
 .pvpHidden{visibility:hidden!important}
 #passScreen.show{display:flex!important}
 
-.discardViewer{display:none;position:fixed;inset:0;z-index:10020;background:rgba(0,0,0,.72);padding:18px;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch}
-.discardViewer.show{display:flex!important}
-.discardViewerBox{background:#fff;width:min(760px,94vw);max-height:88vh;overflow:auto;border-radius:16px;padding:16px;position:relative;-webkit-overflow-scrolling:touch}
-.discardViewer .cardZoomClose{position:sticky;top:0;float:right;z-index:2}
-.discardViewer .discardCard{display:inline-block;vertical-align:top;width:min(180px,44%);margin:5px;padding:8px;border:1px solid #bde3f7;border-radius:10px;background:#fff;text-align:left}
-.discardViewer .discardCard img{width:100%;height:auto;display:block;border-radius:7px;cursor:zoom-in}
 </style>
 <style id="masterOnlyStyle">
 body.master-build header{display:none}
@@ -98,13 +92,19 @@ body.master-build #adminPanel{display:block!important}
 </div>
 <div class="hint">勝利条件：相手を3体倒す、または相手の場を0体にする。初期手札には必ずキャラ1枚以上。各プレイヤーの最初のターンは必ずキャラを1体出す。1ターンに「キャラ1体まで・サポート1枚まで・攻撃1回まで」。合体技はサポートに含まず、攻撃1回として扱います。</div><div class="hint" style="margin-top:7px;text-align:center"><b>🔍 カード画像をタップすると大きく表示できます</b></div>
 <section class="panel" id="publicInfoPanel"><b>📋 公開情報</b><div id="publicInfo" style="margin-top:6px"></div></section>
+<section class="panel hidden" id="discardPanel">
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+  <b id="discardPanelTitle">🗑️ 捨て札</b>
+  <button onclick="closeDiscardPanel()">閉じる</button>
+ </div>
+ <div id="discardPanelCards" class="hand" style="margin-top:8px"></div>
+</section>
 <section class="panel"><b>🤖 CPUの場</b><div class="board" id="eb"></div></section>
 <section class="panel"><b>🙂 あなたの場</b><div class="board" id="pb"></div><div class="center" id="attackButtons"></div></section>
 <section class="panel"><b>🃏 あなたの手札</b><div class="hand" id="hand"></div></section>
 <section class="panel center"><button class="end" id="end" onclick="endTurn()">ターン終了</button><button onclick="saveCurrentGame()">💾 対戦をセーブ</button><button onclick="backToSetup()">デッキ編成へ</button><button onclick="newGame()">同じ設定でもう一戦</button></section>
 <section class="panel"><b>対戦ログ</b><div class="log" id="log"></div></section>
 </div></main>
-<div id="discardViewer" class="discardViewer" onclick="closeDiscardViewer()"><div class="discardViewerBox" onclick="event.stopPropagation()"><button class="cardZoomClose" onclick="closeDiscardViewer()">×</button><h2 id="discardViewerTitle">捨て札</h2><div id="discardViewerCards" class="hand"></div></div></div>
 <div id="cardZoom" class="cardZoom" onclick="closeCardZoom()"><button class="cardZoomClose" onclick="event.stopPropagation();closeCardZoom()">×</button><img id="cardZoomImg" alt="カード拡大表示" onclick="event.stopPropagation()"></div>
 <script>
 const EMBEDDED_EXPORT_STATE=null;
@@ -428,34 +428,37 @@ function validDeckObject(d){
 }
 function publicInfoHTML(){
  if(!S)return '';let me=S.mode==='pvp'?pvpSide():S.p,op=S.mode==='pvp'?pvpOpp():S.e,meName=S.mode==='pvp'?pvpName():'あなた',opName=S.mode==='pvp'?pvpOtherName():'CPU';
- return `<div style="display:flex;gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:210px"><b>${meName}</b><br>手札 ${me.hand.length}枚 ｜ 山札 ${me.deck.length}枚 ｜ 捨て札 ${me.discard.length}枚<br><button onclick="openDiscardViewer('me')">捨て札を見る</button></div><div style="flex:1;min-width:210px"><b>${opName}</b><br>手札 ${op.hand.length}枚 ｜ 山札 ${op.deck.length}枚 ｜ 捨て札 ${op.discard.length}枚<br><button onclick="openDiscardViewer('opp')">捨て札を見る</button></div></div>`;
+ return `<div style="display:flex;gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:210px"><b>${meName}</b><br>手札 ${me.hand.length}枚 ｜ 山札 ${me.deck.length}枚 ｜ 捨て札 ${me.discard.length}枚<br><button onclick="showDiscardPanel('me')">捨て札を見る</button></div><div style="flex:1;min-width:210px"><b>${opName}</b><br>手札 ${op.hand.length}枚 ｜ 山札 ${op.deck.length}枚 ｜ 捨て札 ${op.discard.length}枚<br><button onclick="showDiscardPanel('opp')">捨て札を見る</button></div></div>`;
 }
-function openDiscardViewer(which){
+function showDiscardPanel(which){
  if(!S)return;
- let side,ttl;
+ let side,title;
  if(S.mode==='pvp'){
    side=which==='me'?pvpSide():pvpOpp();
-   ttl=which==='me'?`${pvpName()}の捨て札`:`${pvpOtherName()}の捨て札`;
+   title=which==='me'?`${pvpName()}の捨て札`:`${pvpOtherName()}の捨て札`;
  }else{
    side=which==='me'?S.p:S.e;
-   ttl=which==='me'?'あなたの捨て札':'CPUの捨て札';
+   title=which==='me'?'あなたの捨て札':'CPUの捨て札';
  }
- const viewer=document.getElementById('discardViewer'),title=document.getElementById('discardViewerTitle'),box=document.getElementById('discardViewerCards');
- if(!viewer||!title||!box)return;
- title.textContent=`${ttl}（${side.discard.length}枚）`;
- if(!side.discard.length)box.innerHTML='<p>捨て札はありません。</p>';
- else box.innerHTML=side.discard.map(c=>{
-   const img=images[c.code];
-   return `<div class="discardCard">${img?`<img src="${img}" alt="${String(c.name).replace(/"/g,'&quot;')}" onclick="event.stopPropagation();openCardZoom('${c.code}')">`:''}<b>${c.name}</b>${releaseBadge(c)}</div>`;
- }).join('');
- viewer.classList.add('show');
- viewer.style.display='flex';
- document.body.style.overflow='hidden';
+ const panel=document.getElementById('discardPanel');
+ const titleEl=document.getElementById('discardPanelTitle');
+ const cards=document.getElementById('discardPanelCards');
+ if(!panel||!titleEl||!cards)return;
+ titleEl.textContent=`🗑️ ${title}（${side.discard.length}枚）`;
+ if(side.discard.length===0){
+   cards.innerHTML='<div class="small">まだ捨て札はありません。</div>';
+ }else{
+   cards.innerHTML=side.discard.map(c=>{
+     const src=images[c.code]||'';
+     const img=src?`<img class="miniimg zoomable" src="${src}" alt="${String(c.name).replace(/"/g,'&quot;')}" onclick="event.stopPropagation();openCardZoom('${c.code}')">`:'';
+     return `<div class="cardbtn" style="cursor:default">${img}<b>${c.name}</b>${releaseBadge(c)}<div class="clear"></div></div>`;
+   }).join('');
+ }
+ panel.classList.remove('hidden');
+ panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-function closeDiscardViewer(){
- const viewer=document.getElementById('discardViewer');
- if(viewer){viewer.classList.remove('show');viewer.style.display='none'}
- document.body.style.overflow='';
+function closeDiscardPanel(){
+ document.getElementById('discardPanel')?.classList.add('hidden');
 }
 
 function newGame(){if(!validateDeck())return;let mode=document.getElementById('battleMode')?.value||'cpu',first=Math.random()<.5?'p':'e',diff=document.getElementById('difficulty').value,pDeck={counts:{...deckCounts},size:deckSize,name:'現在のデッキ'},eDeck=pDeck;if(mode==='pvp'){pDeck=selectedPvpDeck('p1DeckSelect');eDeck=selectedPvpDeck('p2DeckSelect');if(!validDeckObject(pDeck)||!validDeckObject(eDeck)){alert('P1またはP2の保存デッキが現在のデッキ枚数ルールに合っていません。');return}}S={mode,turn:first,round:1,gameOver:false,pKO:0,eKO:0,difficulty:diff,pDeckName:pDeck.name,eDeckName:eDeck.name,p:newSide(buildDeck('p',pDeck.counts)),e:newSide(buildDeck('e',eDeck.counts))};pending=null;document.getElementById('setup').classList.add('hidden');document.getElementById('game').classList.remove('hidden');document.getElementById('log').innerHTML='';openingHand(S.p);openingHand(S.e);L('対戦開始！ 初期手札4枚には必ずキャラが1枚以上入ります。');if(mode==='pvp'){L(`P1：${pDeck.name} / P2：${eDeck.name}`);L(first==='p'?'🪙 先攻はプレイヤー1！':'🪙 先攻はプレイヤー2！');showPassScreen(first,true)}else{L(first==='p'?'🪙 先攻はあなた！':'🪙 先攻はCPU！');render();if(first==='e')setTimeout(cpuTurn,700)}}
