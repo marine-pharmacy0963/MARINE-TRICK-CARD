@@ -19,12 +19,23 @@
 <div class="setupGrid"><div><b>🤖 CPU難易度</b><br><select id="difficulty"><option value="easy">EASY：かなり気楽</option><option value="normal" selected>NORMAL：標準</option><option value="hard">HARD：勝ちにくる</option></select><p class="small">EASYは行動がランダム寄り、NORMALは有利な技を優先、HARDは撃破できる相手や回復・強化をより賢く選びます。</p></div><div><b>🪙 先攻・後攻</b><p>対戦開始時に毎回ランダムで決定します。結果はログと上部に表示されます。</p></div></div>
 <div class="adminbox">
  <b>🔧 管理モード</b>
- <p class="small">通常プレイヤーには設定を触らせず、管理者パスワードを入力した場合だけカード性能や投入上限を編集できます。</p>
+ <p class="small">管理者パスワードを入力すると、カードの追加・削除・名前変更・性能・合体条件・投入上限・画像を編集できます。</p>
  <button id="adminToggle" onclick="requestAdmin()">管理モードを開く</button>
  <div id="adminPanel" class="hidden">
    <p class="adminnote">※管理画面はパスワードでロックされています。HTML単体方式のため、ソースコードを直接解析・編集できる人に対する完全なセキュリティ保護ではありません。</p>
+   <div style="border-top:1px solid #ccb9e7;margin:10px 0;padding-top:10px">
+     <b>➕ 新しいカードを追加</b>
+     <div class="setupGrid" style="margin-top:6px">
+       <div><span class="small">カード名</span><br><input id="newName" placeholder="カード名"></div>
+       <div><span class="small">種類</span><br><select id="newType" onchange="renderNewCardFields()"><option value="char">キャラクター</option><option value="combo">2人合体技</option><option value="triple">3人合体技</option><option value="draw">サポート：ドロー</option><option value="power">サポート：攻撃強化</option><option value="heal">サポート：回復</option><option value="defend">サポート：防御</option><option value="guard">サポート：かばう</option></select></div>
+     </div>
+     <div id="newCardFields"></div>
+     <button onclick="addNewCard()">このカードを追加</button>
+   </div>
+   <hr style="border:0;border-top:1px solid #ccb9e7;margin:12px 0">
+   <b>✏️ 登録カード一覧</b>
    <div id="adminEditor"></div>
-   <div class="setupActions"><button onclick="saveAdmin()">管理設定を保存</button><button onclick="resetAdmin()">初期値に戻す</button><button class="danger" onclick="clearImages();renderAdmin()">登録画像を全削除</button></div>
+   <div class="setupActions"><button onclick="try{saveAdmin()}catch(e){alert(e.message)}">管理設定を保存</button><button onclick="resetAdmin()">初期カードに戻す</button><button class="danger" onclick="clearImages();renderAdmin()">登録画像を全削除</button></div>
  </div>
 </div>
 <details open><summary>🃏 デッキ編成</summary><p class="small">デッキ枚数は下で自由に変更できます。2人合体技・3人合体技は各1枚まで。カード画像の登録・変更・削除は管理モードから行います。</p><div style="margin:8px 0"><b>デッキ枚数：</b><input id="deckSize" type="number" min="10" max="60" value="20" style="width:75px" onchange="setDeckSize(this.value)"> 枚 <span class="small">（10〜60枚）</span></div><div id="deckEditor"></div><div class="setupActions"><span id="deckCount" class="deckok"></span> <button onclick="resetDeck()">初期編成</button> <button id="startBtn" onclick="newGame()">このデッキで対戦開始</button></div></details>
@@ -53,6 +64,10 @@ const DEFAULT_CARD_POOL=[
  {code:'defend',type:'defend',name:'守りを固めろ！',text:'次に受けるダメージ-20',defaultCount:2,max:4}
 ];
 let CARD_POOL=JSON.parse(JSON.stringify(DEFAULT_CARD_POOL));
+try{
+ const savedPool=JSON.parse(localStorage.getItem('marineTrickCardPoolV6')||'null');
+ if(Array.isArray(savedPool)&&savedPool.length) CARD_POOL=savedPool;
+}catch(e){}
 try{
  const savedRules=JSON.parse(localStorage.getItem('marineTrickAdminRulesV3')||'null');
  if(savedRules){
@@ -90,44 +105,83 @@ function toggleAdmin(){
  document.getElementById('adminToggle').textContent=adminOpen?'管理モードを閉じる':'管理モードを開く';
  if(adminOpen)renderAdmin();
 }
+function charOptions(selected=[]){
+ return CARD_POOL.filter(c=>c.type==='char').map(c=>`<option value="${c.key}" ${selected.includes(c.key)?'selected':''}>${c.name}</option>`).join('');
+}
+function renderNewCardFields(){
+ let type=document.getElementById('newType')?.value||'char',box=document.getElementById('newCardFields');if(!box)return;
+ if(type==='char')box.innerHTML=`<div class="setupGrid"><div>HP <input id="newHp" type="number" value="120" min="10" max="999"></div><div>通常攻撃 <input id="newAtk" type="number" value="30" min="0" max="999"></div></div><p class="small">キャラクター記号は自動で割り当てます。</p>`;
+ else if(type==='combo')box.innerHTML=`<div class="setupGrid"><div>ダメージ <input id="newDmg" type="number" value="60" min="0" max="999"></div><div>必要キャラ（2人選択）<br><select id="need1">${charOptions()}</select> ＋ <select id="need2">${charOptions()}</select></div></div>`;
+ else if(type==='triple')box.innerHTML=`<div class="setupGrid"><div>ダメージ <input id="newDmg" type="number" value="110" min="0" max="999"></div><div>必要キャラ（3人選択）<br><select id="need1">${charOptions()}</select> ＋ <select id="need2">${charOptions()}</select> ＋ <select id="need3">${charOptions()}</select></div></div>`;
+ else box.innerHTML=`<p class="small">サポート効果は種類ごとの既定効果を使います。名前・最大投入枚数・画像は追加後に編集できます。</p>`;
+}
+function nextCharKey(){
+ let used=new Set(CARD_POOL.filter(c=>c.type==='char').map(c=>c.key));
+ const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+ for(const k of chars)if(!used.has(k))return k;
+ return 'X'+Date.now();
+}
+function addNewCard(){
+ let name=(document.getElementById('newName').value||'').trim(),type=document.getElementById('newType').value;
+ if(!name){alert('カード名を入力してください。');return}
+ let code='custom_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+ let c={code,type,name,defaultCount:0,max:(type==='combo'||type==='triple'?1:2)};
+ if(type==='char'){c.key=nextCharKey();c.hp=Math.max(10,Math.min(999,Number(document.getElementById('newHp').value)||120));c.atk=Math.max(0,Math.min(999,Number(document.getElementById('newAtk').value)||0))}
+ else if(type==='combo'||type==='triple'){
+   c.dmg=Math.max(0,Math.min(999,Number(document.getElementById('newDmg').value)||0));
+   let ids=type==='combo'?['need1','need2']:['need1','need2','need3'];c.need=ids.map(id=>document.getElementById(id).value);
+   if(new Set(c.need).size!==c.need.length){alert('必要キャラは別々のキャラを選んでください。');return}
+ }else{
+   const defs={draw:{text:'+2ドロー'},power:{text:'次の攻撃+10'},heal:{text:'味方1体を20回復'},defend:{text:'次に受けるダメージ-20'},guard:{text:'次に受ける攻撃の対象を変更'}};
+   Object.assign(c,defs[type]||{});
+ }
+ CARD_POOL.push(c);deckCounts[code]=0;persistPool();renderEditor();renderAdmin();renderNewCardFields();document.getElementById('newName').value='';
+}
+function persistPool(){localStorage.setItem('marineTrickCardPoolV6',JSON.stringify(CARD_POOL))}
 function renderAdmin(){
  let box=document.getElementById('adminEditor');box.innerHTML='';
  CARD_POOL.forEach(c=>{
-   let r=document.createElement('div');r.className='adminrow';
-   let performance=c.type==='char'
-     ? `<input id="adm_hp_${c.code}" type="number" min="10" max="999" value="${c.hp}" title="HP"><input id="adm_atk_${c.code}" type="number" min="0" max="999" value="${c.atk}" title="通常攻撃">`
-     : c.dmg!=null
-       ? `<input id="adm_dmg_${c.code}" type="number" min="0" max="999" value="${c.dmg}" title="ダメージ"><span class="widehide small">技ダメージ</span>`
-       : `<span class="widehide small">効果固定</span><span class="widehide small">－</span>`;
-   r.innerHTML=`<div>${images[c.code]?`<img class="thumb" src="${images[c.code]}">`:''}<b>${c.name}</b><br><span class="small">${c.type==='char'?'HP / 攻撃 / 最大枚数':c.dmg!=null?'ダメージ / 最大枚数':'最大枚数'}</span><br><button class="upload" onclick="document.getElementById('adm_up_${c.code}').click()">画像を登録・変更</button><input id="adm_up_${c.code}" type="file" accept="image/*" hidden onchange="setImage('${c.code}',this.files[0]);setTimeout(renderAdmin,100)">${images[c.code]?`<button class="danger" onclick="removeImage('${c.code}')">画像削除</button>`:''}<div class="clear"></div></div>${performance}<input id="adm_max_${c.code}" type="number" min="0" max="20" value="${c.max}" title="最大投入枚数"><span class="widehide small">枚まで</span>`;
+   let r=document.createElement('div');r.className='deckrow';r.style.gridTemplateColumns='minmax(190px,1fr) auto';
+   let perf=c.type==='char'
+    ? `HP <input id="adm_hp_${c.code}" type="number" min="10" max="999" value="${c.hp}" style="width:70px"> 攻撃 <input id="adm_atk_${c.code}" type="number" min="0" max="999" value="${c.atk}" style="width:70px">`
+    : c.dmg!=null ? `ダメージ <input id="adm_dmg_${c.code}" type="number" min="0" max="999" value="${c.dmg}" style="width:70px">` : `<span class="small">${c.text||'サポート'}</span>`;
+   let need='';
+   if(c.type==='combo'||c.type==='triple'){
+     need='<br><span class="small">必要：</span>'+c.need.map((k,i)=>`<select id="adm_need_${c.code}_${i}">${charOptions([k])}</select>`).join(' ＋ ');
+   }
+   r.innerHTML=`<div>${images[c.code]?`<img class="thumb" src="${images[c.code]}">`:''}<input id="adm_name_${c.code}" value="${String(c.name).replace(/"/g,'&quot;')}" style="font-weight:900;max-width:220px"><br><span class="small">${c.type==='char'?'キャラクター':c.type==='combo'?'2人合体技':c.type==='triple'?'3人合体技':'サポート'}</span><br>${perf}${need}<br>最大 <input id="adm_max_${c.code}" type="number" min="0" max="20" value="${c.max}" style="width:58px"> 枚<br><button class="upload" onclick="document.getElementById('adm_up_${c.code}').click()">画像を登録・変更</button><input id="adm_up_${c.code}" type="file" accept="image/*" hidden onchange="setImage('${c.code}',this.files[0]);setTimeout(renderAdmin,100)">${images[c.code]?`<button class="danger" onclick="removeImage('${c.code}')">画像削除</button>`:''}<div class="clear"></div></div><div><button class="danger" onclick="deleteCard('${c.code}')">カード削除</button></div>`;
    box.appendChild(r);
  });
+ renderNewCardFields();
 }
 function saveAdmin(){
- let rules={};
  CARD_POOL.forEach(c=>{
-   let maxEl=document.getElementById('adm_max_'+c.code);
-   if(maxEl)c.max=Math.max(0,Math.min(20,Number(maxEl.value)||0));
+   let nameEl=document.getElementById('adm_name_'+c.code);if(nameEl&&nameEl.value.trim())c.name=nameEl.value.trim();
+   let maxEl=document.getElementById('adm_max_'+c.code);if(maxEl)c.max=Math.max(0,Math.min(20,Number(maxEl.value)||0));
    if(c.type==='char'){
      c.hp=Math.max(10,Math.min(999,Number(document.getElementById('adm_hp_'+c.code).value)||c.hp));
      c.atk=Math.max(0,Math.min(999,Number(document.getElementById('adm_atk_'+c.code).value)||0));
-     rules[c.code]={max:c.max,hp:c.hp,atk:c.atk};
    }else if(c.dmg!=null){
      c.dmg=Math.max(0,Math.min(999,Number(document.getElementById('adm_dmg_'+c.code).value)||0));
-     rules[c.code]={max:c.max,dmg:c.dmg};
-   }else rules[c.code]={max:c.max};
+     c.need=c.need.map((_,i)=>document.getElementById(`adm_need_${c.code}_${i}`).value);
+     if(new Set(c.need).size!==c.need.length) throw new Error('合体技の必要キャラが重複しています');
+   }
    if((deckCounts[c.code]||0)>c.max)deckCounts[c.code]=c.max;
  });
- localStorage.setItem('marineTrickAdminRulesV3',JSON.stringify(rules));
- localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));
- renderEditor();renderAdmin();alert('管理設定を保存しました。');
+ persistPool();localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));
+ renderEditor();renderAdmin();alert('カード設定を保存しました。');
+}
+function deleteCard(code){
+ let c=CARD_POOL.find(x=>x.code===code);if(!c)return;
+ if(!confirm(`「${c.name}」をカード一覧から削除しますか？`))return;
+ if(c.type==='char'&&CARD_POOL.some(x=>(x.type==='combo'||x.type==='triple')&&x.need&&x.need.includes(c.key))){alert('このキャラを必要とする合体技があります。先にその合体技を削除するか、必要キャラを変更してください。');return}
+ CARD_POOL=CARD_POOL.filter(x=>x.code!==code);delete deckCounts[code];delete images[code];
+ persistPool();localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));localStorage.setItem('marineTrickImagesV2',JSON.stringify(images));renderEditor();renderAdmin();
 }
 function resetAdmin(){
- if(!confirm('カード性能と最大枚数を初期設定に戻しますか？'))return;
- CARD_POOL=JSON.parse(JSON.stringify(DEFAULT_CARD_POOL));
- localStorage.removeItem('marineTrickAdminRulesV3');
- CARD_POOL.forEach(c=>{if((deckCounts[c.code]||0)>c.max)deckCounts[c.code]=c.max});
- localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));
+ if(!confirm('追加カードを含むカード一覧を、最初の状態に戻しますか？'))return;
+ CARD_POOL=JSON.parse(JSON.stringify(DEFAULT_CARD_POOL));deckCounts={};CARD_POOL.forEach(c=>deckCounts[c.code]=c.defaultCount);
+ localStorage.removeItem('marineTrickCardPoolV6');localStorage.removeItem('marineTrickAdminRulesV3');localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));
  renderEditor();renderAdmin();
 }
 
