@@ -24,10 +24,10 @@
  <div id="adminPanel" class="hidden">
    <p class="adminnote">※管理画面はパスワードでロックされています。HTML単体方式のため、ソースコードを直接解析・編集できる人に対する完全なセキュリティ保護ではありません。</p>
    <div id="adminEditor"></div>
-   <div class="setupActions"><button onclick="saveAdmin()">管理設定を保存</button><button onclick="resetAdmin()">初期値に戻す</button></div>
+   <div class="setupActions"><button onclick="saveAdmin()">管理設定を保存</button><button onclick="resetAdmin()">初期値に戻す</button><button class="danger" onclick="clearImages();renderAdmin()">登録画像を全削除</button></div>
  </div>
 </div>
-<details open><summary>🃏 デッキ編成</summary><p class="small">デッキ枚数は下で自由に変更できます。2人合体技・3人合体技は各1枚まで。カード画像は各カードの「画像」から自分で追加できます。画像はこの端末のブラウザに保存します。</p><div style="margin:8px 0"><b>デッキ枚数：</b><input id="deckSize" type="number" min="10" max="60" value="20" style="width:75px" onchange="setDeckSize(this.value)"> 枚 <span class="small">（10〜60枚）</span></div><div id="deckEditor"></div><div class="setupActions"><span id="deckCount" class="deckok"></span> <button onclick="resetDeck()">初期編成</button> <button class="danger" onclick="clearImages()">画像を全削除</button> <button id="startBtn" onclick="newGame()">このデッキで対戦開始</button></div></details>
+<details open><summary>🃏 デッキ編成</summary><p class="small">デッキ枚数は下で自由に変更できます。2人合体技・3人合体技は各1枚まで。カード画像の登録・変更・削除は管理モードから行います。</p><div style="margin:8px 0"><b>デッキ枚数：</b><input id="deckSize" type="number" min="10" max="60" value="20" style="width:75px" onchange="setDeckSize(this.value)"> 枚 <span class="small">（10〜60枚）</span></div><div id="deckEditor"></div><div class="setupActions"><span id="deckCount" class="deckok"></span> <button onclick="resetDeck()">初期編成</button> <button id="startBtn" onclick="newGame()">このデッキで対戦開始</button></div></details>
 </section>
 <div id="game" class="hidden">
 <div class="hint">勝利条件：相手を3体倒す、または相手の場を0体にする。初期手札には必ずキャラ1枚以上。各プレイヤーの最初のターンは必ずキャラを1体出す。1ターンに「キャラ1体まで・サポート1枚まで・攻撃1回まで」。合体技はサポートに含まず、攻撃1回として扱います。</div>
@@ -99,7 +99,7 @@ function renderAdmin(){
      : c.dmg!=null
        ? `<input id="adm_dmg_${c.code}" type="number" min="0" max="999" value="${c.dmg}" title="ダメージ"><span class="widehide small">技ダメージ</span>`
        : `<span class="widehide small">効果固定</span><span class="widehide small">－</span>`;
-   r.innerHTML=`<div><b>${c.name}</b><br><span class="small">${c.type==='char'?'HP / 攻撃 / 最大枚数':c.dmg!=null?'ダメージ / 最大枚数':'最大枚数'}</span></div>${performance}<input id="adm_max_${c.code}" type="number" min="0" max="20" value="${c.max}" title="最大投入枚数"><span class="widehide small">枚まで</span>`;
+   r.innerHTML=`<div>${images[c.code]?`<img class="thumb" src="${images[c.code]}">`:''}<b>${c.name}</b><br><span class="small">${c.type==='char'?'HP / 攻撃 / 最大枚数':c.dmg!=null?'ダメージ / 最大枚数':'最大枚数'}</span><br><button class="upload" onclick="document.getElementById('adm_up_${c.code}').click()">画像を登録・変更</button><input id="adm_up_${c.code}" type="file" accept="image/*" hidden onchange="setImage('${c.code}',this.files[0]);setTimeout(renderAdmin,100)">${images[c.code]?`<button class="danger" onclick="removeImage('${c.code}')">画像削除</button>`:''}<div class="clear"></div></div>${performance}<input id="adm_max_${c.code}" type="number" min="0" max="20" value="${c.max}" title="最大投入枚数"><span class="widehide small">枚まで</span>`;
    box.appendChild(r);
  });
 }
@@ -132,11 +132,17 @@ function resetAdmin(){
 }
 
 function cardDesc(c){if(c.type==='char')return `キャラ / HP${c.hp} / 通常${c.atk}${c.recoil?' / 反動'+c.recoil:''}${c.heal?' / 自分+'+c.heal:''}`;if(c.dmg)return `${c.type==='triple'?'3人技':'2人技'} / ${c.dmg}ダメージ`;return `サポート / ${c.text}`}
-function renderEditor(){let box=document.getElementById('deckEditor');box.innerHTML='';CARD_POOL.forEach(c=>{let r=document.createElement('div');r.className='deckrow';let img=images[c.code]?`<img class="thumb" src="${images[c.code]}">`:`<span class="thumb"></span>`;r.innerHTML=`<div>${img}<b>${c.name}</b><br><span class="small">${cardDesc(c)}</span><div class="clear"></div></div><span class="badge">最大${c.max}</span><input type="number" min="0" max="${c.max}" value="${deckCounts[c.code]}" onchange="setCount('${c.code}',this.value)"><label><button class="upload" onclick="document.getElementById('up_${c.code}').click()">画像</button><input id="up_${c.code}" type="file" accept="image/*" hidden onchange="setImage('${c.code}',this.files[0])"></label>`;box.appendChild(r)});validateDeck()}
+function renderEditor(){let box=document.getElementById('deckEditor');box.innerHTML='';CARD_POOL.forEach(c=>{let r=document.createElement('div');r.className='deckrow';let img=images[c.code]?`<img class="thumb" src="${images[c.code]}">`:`<span class="thumb"></span>`;r.innerHTML=`<div>${img}<b>${c.name}</b><br><span class="small">${cardDesc(c)}</span><div class="clear"></div></div><span class="badge">最大${c.max}</span><input type="number" min="0" max="${c.max}" value="${deckCounts[c.code]}" onchange="setCount('${c.code}',this.value)"><span class="small">画像は管理モード</span>`;box.appendChild(r)});validateDeck()}
 function setCount(code,v){let c=CARD_POOL.find(x=>x.code===code);deckCounts[code]=Math.max(0,Math.min(c.max,Number(v)||0));localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));renderEditor()}
 function resetDeck(){deckCounts={};CARD_POOL.forEach(c=>deckCounts[c.code]=c.defaultCount);localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));renderEditor()}
 function validateDeck(){let n=Object.values(deckCounts).reduce((a,b)=>a+Number(b||0),0),chars=CARD_POOL.filter(c=>c.type==='char').reduce((a,c)=>a+(deckCounts[c.code]||0),0);let comboOK=CARD_POOL.filter(c=>c.type==='combo'||c.type==='triple').every(c=>(deckCounts[c.code]||0)<=1);let ok=n===deckSize&&chars>0&&comboOK;let e=document.getElementById('deckCount');e.textContent=`現在 ${n}/${deckSize}枚${chars===0?'（キャラが必要）':''}`;e.style.color=ok?'#16865c':'#c13f3f';document.getElementById('startBtn').disabled=!ok;return ok}
 function setImage(code,file){if(!file)return;let rd=new FileReader();rd.onload=()=>{let im=new Image();im.onload=()=>{let maxW=520,maxH=730,s=Math.min(1,maxW/im.width,maxH/im.height),cv=document.createElement('canvas');cv.width=Math.round(im.width*s);cv.height=Math.round(im.height*s);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);images[code]=cv.toDataURL('image/jpeg',.82);try{localStorage.setItem('marineTrickImagesV2',JSON.stringify(images))}catch(e){alert('画像の保存容量を超えました。画像を小さくして再度お試しください。')}renderEditor();if(S)render()};im.src=rd.result};rd.readAsDataURL(file)}
+function removeImage(code){
+ if(!confirm('このカード画像を削除しますか？'))return;
+ delete images[code];
+ try{localStorage.setItem('marineTrickImagesV2',JSON.stringify(images))}catch(e){}
+ renderAdmin();renderEditor();if(S)render();
+}
 function clearImages(){if(!confirm('登録したカード画像をすべて削除しますか？'))return;images={};localStorage.removeItem('marineTrickImagesV2');renderEditor()}
 function buildDeck(owner,counts=deckCounts){let d=[];CARD_POOL.forEach(c=>{let n=counts[c.code]||0;for(let i=0;i<n;i++)d.push({...c,id:owner+'_'+c.code+'_'+i+'_'+Math.random()})});for(let i=d.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]]}return d}
 function cpuDeck(){return buildDeck('e',deckCounts)}
