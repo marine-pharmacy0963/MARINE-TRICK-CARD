@@ -5,15 +5,29 @@
 <title>MARINE TRICK v2</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eaf7ff;color:#123}header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:4px solid #1686c9;text-align:center;padding:9px}h1{margin:0;color:#0878bd;font-size:23px}.sub{font-size:11px;color:#567}.stats{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:5px}.pill{background:#e5f5ff;border-radius:99px;padding:4px 8px;font-size:12px;font-weight:800}main{max-width:980px;margin:auto;padding:8px}.panel{background:#fff;border:2px solid #9bd6f4;border-radius:15px;padding:9px;margin-bottom:8px}.board{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.slot{border:2px solid #8bc3e2;border-radius:12px;padding:7px;min-height:160px;background:#fff;overflow:hidden}.empty{opacity:.35}.name{font-weight:900}.hp{font-size:12px;font-weight:800}.bar{height:8px;background:#ddd;border-radius:8px;overflow:hidden;margin:5px 0}.fill{height:100%;background:#35a5dc}.cardimg{width:100%;height:95px;object-fit:contain;border-radius:8px;background:#eef8fd;margin-bottom:5px}.miniimg{width:52px;height:72px;object-fit:cover;border-radius:6px;background:#eef8fd;float:left;margin-right:7px}button{border:0;border-radius:9px;padding:8px;font-weight:800;margin:2px;background:#1686c9;color:#fff}button:disabled{opacity:.35}.attack{background:#e66b32}.combo{background:#8056bd}.support{background:#1d9a70}.target{background:#d64c4c;width:100%}.end{background:#34495e}.danger{background:#b94b4b}.hand{display:flex;gap:5px;flex-wrap:wrap}.cardbtn{border:2px solid #7ebfe1;background:#f8fdff;color:#124;padding:7px;min-width:145px;max-width:190px;text-align:left;min-height:90px}.cardbtn b{display:block}.comboCard{border-color:#9c78c9}.supportCard{border-color:#52ad8e}.charCard{border-color:#4ba8d7}.log{height:140px;overflow:auto;background:#102b3a;color:#e9fbff;border-radius:10px;padding:8px;font-size:12px;line-height:1.5}.center{text-align:center}.hint{background:#fff5c9;border:1px solid #e5cb57;border-radius:9px;padding:7px;font-size:12px;margin-bottom:7px}.setupGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.deckrow{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:5px;padding:6px 0;border-bottom:1px solid #def}.deckrow input[type=number]{width:55px;padding:6px;border:1px solid #9bd6f4;border-radius:7px}.badge{font-size:11px;padding:2px 6px;border-radius:99px;background:#eef7fc}.deckok{font-weight:900}.upload{font-size:11px;background:#5b7c91}.thumb{width:38px;height:52px;object-fit:cover;border-radius:5px;background:#eef8fd}.setupActions{position:sticky;bottom:0;background:#fff;padding:8px 0;border-top:1px solid #cde}.hidden{display:none}.small{font-size:11px;color:#567}select{padding:8px;border:1px solid #9bd6f4;border-radius:8px;background:#fff}details summary{cursor:pointer;font-weight:900;color:#0878bd}.clear{clear:both}
+.adminbox{border:2px dashed #8056bd;border-radius:12px;padding:9px;margin-top:10px;background:#faf7ff}
+.adminrow{display:grid;grid-template-columns:minmax(150px,1fr) 82px 82px 82px 82px;gap:5px;align-items:center;margin:5px 0}
+.adminrow input{width:100%}.adminnote{font-size:11px;color:#675}.adminlocked{background:#f4f4f4;border-color:#bbb}
+@media(max-width:700px){.adminrow{grid-template-columns:1fr 68px 68px}.adminrow .widehide{display:none}}
 @media(max-width:700px){.setupGrid{grid-template-columns:1fr}.slot{min-height:135px;padding:5px}.name{font-size:13px}button{font-size:11px}.cardbtn{min-width:calc(50% - 5px);max-width:calc(50% - 5px);font-size:11px}.cardimg{height:72px}.miniimg{width:42px;height:58px}}
 </style>
 </head><body>
-<header><h1>🌊 MARINE TRICK</h1><div class="sub">20枚デッキ・サポート1枚/ターン・3人技はデッキ1枚まで</div><div class="stats"><span class="pill" id="who">準備中</span><span class="pill" id="round">-</span><span class="pill" id="score">-</span><span class="pill" id="counts">-</span><span class="pill" id="difficultyPill">-</span></div></header>
+<header><h1>🌊 MARINE TRICK</h1><div class="sub">デッキ枚数変更可・サポート1枚/ターン・合体技は各1枚まで</div><div class="stats"><span class="pill" id="who">準備中</span><span class="pill" id="round">-</span><span class="pill" id="score">-</span><span class="pill" id="counts">-</span><span class="pill" id="difficultyPill">-</span></div></header>
 <main>
 <section class="panel" id="setup">
 <h2 style="margin:0 0 8px">⚓ 対戦準備</h2>
 <div class="setupGrid"><div><b>🤖 CPU難易度</b><br><select id="difficulty"><option value="easy">EASY：かなり気楽</option><option value="normal" selected>NORMAL：標準</option><option value="hard">HARD：勝ちにくる</option></select><p class="small">EASYは行動がランダム寄り、NORMALは有利な技を優先、HARDは撃破できる相手や回復・強化をより賢く選びます。</p></div><div><b>🪙 先攻・後攻</b><p>対戦開始時に毎回ランダムで決定します。結果はログと上部に表示されます。</p></div></div>
-<details open><summary>🃏 デッキ編成</summary><p class="small">合計20枚にしてください。3人合体技は最大1枚。カード画像は各カードの「画像」から自分で追加できます。画像はこの端末のブラウザに保存します。</p><div id="deckEditor"></div><div class="setupActions"><span id="deckCount" class="deckok"></span> <button onclick="resetDeck()">初期編成</button> <button class="danger" onclick="clearImages()">画像を全削除</button> <button id="startBtn" onclick="newGame()">このデッキで対戦開始</button></div></details>
+<div class="adminbox">
+ <b>🔧 管理モード</b>
+ <p class="small">通常プレイヤーには設定を触らせず、管理者パスワードを入力した場合だけカード性能や投入上限を編集できます。</p>
+ <button id="adminToggle" onclick="requestAdmin()">管理モードを開く</button>
+ <div id="adminPanel" class="hidden">
+   <p class="adminnote">※管理画面はパスワードでロックされています。HTML単体方式のため、ソースコードを直接解析・編集できる人に対する完全なセキュリティ保護ではありません。</p>
+   <div id="adminEditor"></div>
+   <div class="setupActions"><button onclick="saveAdmin()">管理設定を保存</button><button onclick="resetAdmin()">初期値に戻す</button></div>
+ </div>
+</div>
+<details open><summary>🃏 デッキ編成</summary><p class="small">デッキ枚数は下で自由に変更できます。2人合体技・3人合体技は各1枚まで。カード画像は各カードの「画像」から自分で追加できます。画像はこの端末のブラウザに保存します。</p><div style="margin:8px 0"><b>デッキ枚数：</b><input id="deckSize" type="number" min="10" max="60" value="20" style="width:75px" onchange="setDeckSize(this.value)"> 枚 <span class="small">（10〜60枚）</span></div><div id="deckEditor"></div><div class="setupActions"><span id="deckCount" class="deckok"></span> <button onclick="resetDeck()">初期編成</button> <button class="danger" onclick="clearImages()">画像を全削除</button> <button id="startBtn" onclick="newGame()">このデッキで対戦開始</button></div></details>
 </section>
 <div id="game" class="hidden">
 <div class="hint">勝利条件：相手を3体倒す、または相手の場を0体にする。初期手札には必ずキャラ1枚以上。各プレイヤーの最初のターンは必ずキャラを1体出す。1ターンに「キャラ1体まで・サポート1枚まで・攻撃1回まで」。合体技はサポートに含まず、攻撃1回として扱います。</div>
@@ -24,13 +38,13 @@
 <section class="panel"><b>対戦ログ</b><div class="log" id="log"></div></section>
 </div></main>
 <script>
-const CARD_POOL=[
+const DEFAULT_CARD_POOL=[
  {code:'marron',type:'char',key:'A',name:'マロン',hp:120,atk:40,recoil:10,defaultCount:2,max:4},
  {code:'rou',type:'char',key:'B',name:'ルウ',hp:120,atk:30,defaultCount:2,max:4},
  {code:'takeshi',type:'char',key:'C',name:'タケシ',hp:120,atk:20,heal:10,defaultCount:2,max:4},
- {code:'ab',type:'combo',need:['A','B'],name:'A＋B 2人技',dmg:60,defaultCount:1,max:4},
- {code:'bc',type:'combo',need:['B','C'],name:'B＋C 2人技',dmg:60,defaultCount:1,max:4},
- {code:'ac',type:'combo',need:['A','C'],name:'A＋C 2人技',dmg:60,defaultCount:1,max:4},
+ {code:'ab',type:'combo',need:['A','B'],name:'A＋B 2人技',dmg:60,defaultCount:1,max:1},
+ {code:'bc',type:'combo',need:['B','C'],name:'B＋C 2人技',dmg:60,defaultCount:1,max:1},
+ {code:'ac',type:'combo',need:['A','C'],name:'A＋C 2人技',dmg:60,defaultCount:1,max:1},
  {code:'triple',type:'triple',need:['A','B','C'],name:'3人合体技',dmg:110,defaultCount:1,max:1},
  {code:'draw',type:'draw',name:'全力でいこう！',text:'+2ドロー',defaultCount:2,max:4},
  {code:'guard',type:'guard',name:'かばう！',text:'次に受ける攻撃の対象を変更',defaultCount:2,max:4},
@@ -38,15 +52,90 @@ const CARD_POOL=[
  {code:'heal',type:'heal',name:'いやしのしずく',text:'味方1体を20回復',defaultCount:2,max:4},
  {code:'defend',type:'defend',name:'守りを固めろ！',text:'次に受けるダメージ-20',defaultCount:2,max:4}
 ];
+let CARD_POOL=JSON.parse(JSON.stringify(DEFAULT_CARD_POOL));
+try{
+ const savedRules=JSON.parse(localStorage.getItem('marineTrickAdminRulesV3')||'null');
+ if(savedRules){
+   CARD_POOL.forEach(c=>{
+     const s=savedRules[c.code];
+     if(!s)return;
+     if(Number.isFinite(Number(s.max)))c.max=Math.max(0,Math.min(20,Number(s.max)));
+     if(c.type==='char'){
+       if(Number.isFinite(Number(s.hp)))c.hp=Math.max(10,Math.min(999,Number(s.hp)));
+       if(Number.isFinite(Number(s.atk)))c.atk=Math.max(0,Math.min(999,Number(s.atk)));
+     }else if(c.dmg!=null && Number.isFinite(Number(s.dmg)))c.dmg=Math.max(0,Math.min(999,Number(s.dmg)));
+   });
+ }
+}catch(e){}
+
 let deckCounts={},images={},S=null,pending=null;
+let deckSize=Number(localStorage.getItem('marineTrickDeckSizeV2')||20);
+function setDeckSize(v){deckSize=Math.max(10,Math.min(60,Number(v)||20));localStorage.setItem('marineTrickDeckSizeV2',deckSize);document.getElementById('deckSize').value=deckSize;validateDeck()}
 try{images=JSON.parse(localStorage.getItem('marineTrickImagesV2')||'{}')}catch(e){images={}}
 try{deckCounts=JSON.parse(localStorage.getItem('marineTrickDeckV2')||'{}')}catch(e){deckCounts={}}
 CARD_POOL.forEach(c=>{if(deckCounts[c.code]==null)deckCounts[c.code]=c.defaultCount});
+
+let adminOpen=false;
+const ADMIN_PASSWORD='3103';
+function requestAdmin(){
+ if(adminOpen){toggleAdmin();return;}
+ const pw=prompt('管理者パスワードを入力してください');
+ if(pw===null)return;
+ if(pw!==ADMIN_PASSWORD){alert('パスワードが違います。');return;}
+ toggleAdmin();
+}
+function toggleAdmin(){
+ adminOpen=!adminOpen;
+ document.getElementById('adminPanel').classList.toggle('hidden',!adminOpen);
+ document.getElementById('adminToggle').textContent=adminOpen?'管理モードを閉じる':'管理モードを開く';
+ if(adminOpen)renderAdmin();
+}
+function renderAdmin(){
+ let box=document.getElementById('adminEditor');box.innerHTML='';
+ CARD_POOL.forEach(c=>{
+   let r=document.createElement('div');r.className='adminrow';
+   let performance=c.type==='char'
+     ? `<input id="adm_hp_${c.code}" type="number" min="10" max="999" value="${c.hp}" title="HP"><input id="adm_atk_${c.code}" type="number" min="0" max="999" value="${c.atk}" title="通常攻撃">`
+     : c.dmg!=null
+       ? `<input id="adm_dmg_${c.code}" type="number" min="0" max="999" value="${c.dmg}" title="ダメージ"><span class="widehide small">技ダメージ</span>`
+       : `<span class="widehide small">効果固定</span><span class="widehide small">－</span>`;
+   r.innerHTML=`<div><b>${c.name}</b><br><span class="small">${c.type==='char'?'HP / 攻撃 / 最大枚数':c.dmg!=null?'ダメージ / 最大枚数':'最大枚数'}</span></div>${performance}<input id="adm_max_${c.code}" type="number" min="0" max="20" value="${c.max}" title="最大投入枚数"><span class="widehide small">枚まで</span>`;
+   box.appendChild(r);
+ });
+}
+function saveAdmin(){
+ let rules={};
+ CARD_POOL.forEach(c=>{
+   let maxEl=document.getElementById('adm_max_'+c.code);
+   if(maxEl)c.max=Math.max(0,Math.min(20,Number(maxEl.value)||0));
+   if(c.type==='char'){
+     c.hp=Math.max(10,Math.min(999,Number(document.getElementById('adm_hp_'+c.code).value)||c.hp));
+     c.atk=Math.max(0,Math.min(999,Number(document.getElementById('adm_atk_'+c.code).value)||0));
+     rules[c.code]={max:c.max,hp:c.hp,atk:c.atk};
+   }else if(c.dmg!=null){
+     c.dmg=Math.max(0,Math.min(999,Number(document.getElementById('adm_dmg_'+c.code).value)||0));
+     rules[c.code]={max:c.max,dmg:c.dmg};
+   }else rules[c.code]={max:c.max};
+   if((deckCounts[c.code]||0)>c.max)deckCounts[c.code]=c.max;
+ });
+ localStorage.setItem('marineTrickAdminRulesV3',JSON.stringify(rules));
+ localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));
+ renderEditor();renderAdmin();alert('管理設定を保存しました。');
+}
+function resetAdmin(){
+ if(!confirm('カード性能と最大枚数を初期設定に戻しますか？'))return;
+ CARD_POOL=JSON.parse(JSON.stringify(DEFAULT_CARD_POOL));
+ localStorage.removeItem('marineTrickAdminRulesV3');
+ CARD_POOL.forEach(c=>{if((deckCounts[c.code]||0)>c.max)deckCounts[c.code]=c.max});
+ localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));
+ renderEditor();renderAdmin();
+}
+
 function cardDesc(c){if(c.type==='char')return `キャラ / HP${c.hp} / 通常${c.atk}${c.recoil?' / 反動'+c.recoil:''}${c.heal?' / 自分+'+c.heal:''}`;if(c.dmg)return `${c.type==='triple'?'3人技':'2人技'} / ${c.dmg}ダメージ`;return `サポート / ${c.text}`}
 function renderEditor(){let box=document.getElementById('deckEditor');box.innerHTML='';CARD_POOL.forEach(c=>{let r=document.createElement('div');r.className='deckrow';let img=images[c.code]?`<img class="thumb" src="${images[c.code]}">`:`<span class="thumb"></span>`;r.innerHTML=`<div>${img}<b>${c.name}</b><br><span class="small">${cardDesc(c)}</span><div class="clear"></div></div><span class="badge">最大${c.max}</span><input type="number" min="0" max="${c.max}" value="${deckCounts[c.code]}" onchange="setCount('${c.code}',this.value)"><label><button class="upload" onclick="document.getElementById('up_${c.code}').click()">画像</button><input id="up_${c.code}" type="file" accept="image/*" hidden onchange="setImage('${c.code}',this.files[0])"></label>`;box.appendChild(r)});validateDeck()}
 function setCount(code,v){let c=CARD_POOL.find(x=>x.code===code);deckCounts[code]=Math.max(0,Math.min(c.max,Number(v)||0));localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));renderEditor()}
 function resetDeck(){deckCounts={};CARD_POOL.forEach(c=>deckCounts[c.code]=c.defaultCount);localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));renderEditor()}
-function validateDeck(){let n=Object.values(deckCounts).reduce((a,b)=>a+Number(b||0),0),chars=CARD_POOL.filter(c=>c.type==='char').reduce((a,c)=>a+(deckCounts[c.code]||0),0);let ok=n===20&&chars>0&&(deckCounts.triple||0)<=1;let e=document.getElementById('deckCount');e.textContent=`現在 ${n}/20枚${chars===0?'（キャラが必要）':''}`;e.style.color=ok?'#16865c':'#c13f3f';document.getElementById('startBtn').disabled=!ok;return ok}
+function validateDeck(){let n=Object.values(deckCounts).reduce((a,b)=>a+Number(b||0),0),chars=CARD_POOL.filter(c=>c.type==='char').reduce((a,c)=>a+(deckCounts[c.code]||0),0);let comboOK=CARD_POOL.filter(c=>c.type==='combo'||c.type==='triple').every(c=>(deckCounts[c.code]||0)<=1);let ok=n===deckSize&&chars>0&&comboOK;let e=document.getElementById('deckCount');e.textContent=`現在 ${n}/${deckSize}枚${chars===0?'（キャラが必要）':''}`;e.style.color=ok?'#16865c':'#c13f3f';document.getElementById('startBtn').disabled=!ok;return ok}
 function setImage(code,file){if(!file)return;let rd=new FileReader();rd.onload=()=>{let im=new Image();im.onload=()=>{let maxW=520,maxH=730,s=Math.min(1,maxW/im.width,maxH/im.height),cv=document.createElement('canvas');cv.width=Math.round(im.width*s);cv.height=Math.round(im.height*s);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);images[code]=cv.toDataURL('image/jpeg',.82);try{localStorage.setItem('marineTrickImagesV2',JSON.stringify(images))}catch(e){alert('画像の保存容量を超えました。画像を小さくして再度お試しください。')}renderEditor();if(S)render()};im.src=rd.result};rd.readAsDataURL(file)}
 function clearImages(){if(!confirm('登録したカード画像をすべて削除しますか？'))return;images={};localStorage.removeItem('marineTrickImagesV2');renderEditor()}
 function buildDeck(owner,counts=deckCounts){let d=[];CARD_POOL.forEach(c=>{let n=counts[c.code]||0;for(let i=0;i<n;i++)d.push({...c,id:owner+'_'+c.code+'_'+i+'_'+Math.random()})});for(let i=d.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]]}return d}
@@ -72,5 +161,5 @@ function endTurn(){if(S.turn!=='p'||S.gameOver)return;if(!S.p.hasTakenTurn&&S.p.
 function removeCard(side,c){side.hand.splice(side.hand.indexOf(c),1);side.discard.push(c)}
 function cpuSupport(e){let diff=S.difficulty,hurt=alive(e.board).sort((a,b)=>a.cur-b.cur)[0],heal=e.hand.find(x=>x.type==='heal'),power=e.hand.find(x=>x.type==='power'),def=e.hand.find(x=>x.type==='defend'),drawC=e.hand.find(x=>x.type==='draw');let c=null;if(diff==='easy'){let opts=e.hand.filter(x=>!['char','combo','triple'].includes(x.type));if(opts.length&&Math.random()<.55)c=opts[Math.floor(Math.random()*opts.length)]}else if(diff==='hard'){if(heal&&hurt&&hurt.cur<=80)c=heal;else if(power&&alive(e.board).length)c=power;else if(drawC&&e.deck.length>=2)c=drawC;else if(def)c=def}else{if(heal&&hurt&&hurt.cur<=70)c=heal;else if(drawC)c=drawC;else if(power&&Math.random()<.5)c=power;else if(def&&Math.random()<.35)c=def}if(!c)return;if(c.type==='heal'&&hurt){removeCard(e,c);hurt.cur=Math.min(hurt.hp,hurt.cur+20);L(`CPU：いやしのしずく！ ${hurt.name}を20回復。`)}else if(c.type==='draw'){removeCard(e,c);draw(e,2);L('CPU：全力でいこう！ 2枚ドロー。')}else if(c.type==='power'){removeCard(e,c);e.power+=10;L('CPU：パワーアップ！ 次の攻撃+10。')}else if(c.type==='defend'){removeCard(e,c);e.defend=20;L('CPU：守りを固めろ！ 次に受けるダメージを20軽減。')}else if(c.type==='guard'){removeCard(e,c);e.guard=true;L('CPU：かばう！')}e.supported=true}
 function cpuTurn(){if(S.gameOver)return;let e=S.e,p=S.p;e.summoned=false;e.attacked=false;e.supported=false;draw(e,1);cpuSupport(e);if(e.board.length<3){let chars=e.hand.filter(x=>x.type==='char'),c=null;if(chars.length){if(S.difficulty==='hard')c=chars.sort((a,b)=>b.atk-a.atk)[0];else c=chars[Math.floor(Math.random()*chars.length)];e.hand.splice(e.hand.indexOf(c),1);c.cur=c.hp;c.uid='ec'+Math.random();e.board.push(c);e.summoned=true;L(`CPU：${c.name}を場に出した。`)}}if(!e.hasTakenTurn&&e.board.length===0){L('CPUは最初のターンにキャラを出せず、ターン終了。')}let targets=alive(p.board);if(targets.length&&alive(e.board).length){let legal=e.hand.filter(x=>(x.type==='combo'||x.type==='triple')&&hasNeed(e.board,x.need)),chosen=null,actor=null,dmg=0,lab='';if(S.difficulty==='easy'){if(legal.length&&Math.random()<.35)chosen=legal[Math.floor(Math.random()*legal.length)]}else if(legal.length)chosen=legal.sort((a,b)=>b.dmg-a.dmg)[0];if(chosen){dmg=chosen.dmg;lab=chosen.name;removeCard(e,chosen)}else{let at=alive(e.board);actor=S.difficulty==='hard'?at.sort((a,b)=>b.atk-a.atk)[0]:at[Math.floor(Math.random()*at.length)];dmg=actor.atk;lab=`${actor.name}の通常攻撃`}dmg+=e.power;e.power=0;let t;if(p.guard){t=targets.sort((a,b)=>b.cur-a.cur)[0];p.guard=false;L('あなたの「かばう！」が発動！')}else if(S.difficulty==='hard'){let killable=targets.filter(x=>x.cur<=dmg).sort((a,b)=>a.cur-b.cur);t=killable[0]||targets.sort((a,b)=>a.cur-b.cur)[0]}else t=targets[Math.floor(Math.random()*targets.length)];dmg=Math.max(0,dmg-p.defend);if(p.defend){L(`守りを固めろ！ ダメージを${p.defend}軽減。`);p.defend=0}t.cur-=dmg;L(`CPU：${lab} → ${t.name}に${dmg}ダメージ！`);if(actor&&actor.recoil){actor.cur-=actor.recoil;L(`CPUの${actor.name}は反動${actor.recoil}。`)}if(actor&&actor.heal)actor.cur=Math.min(actor.hp,actor.cur+actor.heal)}e.hasTakenTurn=true;clean();if(S.gameOver){render();return}S.turn='p';S.round++;S.p.summoned=false;S.p.attacked=false;S.p.supported=false;draw(S.p,1);L('あなたのターン。1枚ドロー！');render()}
-renderEditor();
+renderEditor();document.getElementById('deckSize').value=deckSize;validateDeck();
 </script></body></html>
