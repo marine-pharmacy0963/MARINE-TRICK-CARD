@@ -35,7 +35,7 @@
    <hr style="border:0;border-top:1px solid #ccb9e7;margin:12px 0">
    <b>✏️ 登録カード一覧</b>
    <div id="adminEditor"></div>
-   <div class="setupActions"><button onclick="try{saveAdmin()}catch(e){alert(e.message)}">管理設定を保存</button><button onclick="resetAdmin()">初期カードに戻す</button><button class="danger" onclick="clearImages();renderAdmin()">登録画像を全削除</button></div>
+   <div class="setupActions"><button onclick="try{saveAdmin()}catch(e){alert(e.message)}">管理設定を保存</button><button onclick="exportEmbeddedHTML()">📦 画像・設定入りHTMLを書き出す</button><button onclick="resetAdmin()">初期カードに戻す</button><button class="danger" onclick="clearImages();renderAdmin()">登録画像を全削除</button></div><p class="small">※書き出したHTMLには、現在のカード画像・カード設定・デッキ編成・デッキ枚数を埋め込みます。別端末でもHTML単体で表示できます。</p>
  </div>
 </div>
 <details open><summary>🃏 デッキ編成</summary><p class="small">デッキ枚数は下で自由に変更できます。2人合体技・3人合体技は各1枚まで。カード画像の登録・変更・削除は管理モードから行います。</p><div style="margin:8px 0"><b>デッキ枚数：</b><input id="deckSize" type="number" min="10" max="60" value="20" style="width:75px" onchange="setDeckSize(this.value)"> 枚 <span class="small">（10〜60枚）</span></div><div id="deckEditor"></div><div class="setupActions"><span id="deckCount" class="deckok"></span> <button onclick="resetDeck()">初期編成</button> <button id="startBtn" onclick="newGame()">このデッキで対戦開始</button></div></details>
@@ -63,7 +63,8 @@ const DEFAULT_CARD_POOL=[
  {code:'heal',type:'heal',name:'いやしのしずく',text:'味方1体を20回復',defaultCount:2,max:4},
  {code:'defend',type:'defend',name:'守りを固めろ！',text:'次に受けるダメージ-20',defaultCount:2,max:4}
 ];
-let CARD_POOL=JSON.parse(JSON.stringify(DEFAULT_CARD_POOL));
+const EMBEDDED_STATE = /*__EMBEDDED_STATE_START__*/ null /*__EMBEDDED_STATE_END__*/;
+let CARD_POOL=EMBEDDED_STATE&&Array.isArray(EMBEDDED_STATE.cardPool)?JSON.parse(JSON.stringify(EMBEDDED_STATE.cardPool)):JSON.parse(JSON.stringify(DEFAULT_CARD_POOL));
 try{
  const savedPool=JSON.parse(localStorage.getItem('marineTrickCardPoolV6')||'null');
  if(Array.isArray(savedPool)&&savedPool.length) CARD_POOL=savedPool;
@@ -84,10 +85,11 @@ try{
 }catch(e){}
 
 let deckCounts={},images={},S=null,pending=null;
-let deckSize=Number(localStorage.getItem('marineTrickDeckSizeV2')||20);
+if(EMBEDDED_STATE){deckCounts=JSON.parse(JSON.stringify(EMBEDDED_STATE.deckCounts||{}));images=JSON.parse(JSON.stringify(EMBEDDED_STATE.images||{}));}
+let deckSize=Number(localStorage.getItem('marineTrickDeckSizeV2')||(EMBEDDED_STATE&&EMBEDDED_STATE.deckSize)||20);
 function setDeckSize(v){deckSize=Math.max(10,Math.min(60,Number(v)||20));localStorage.setItem('marineTrickDeckSizeV2',deckSize);document.getElementById('deckSize').value=deckSize;validateDeck()}
-try{images=JSON.parse(localStorage.getItem('marineTrickImagesV2')||'{}')}catch(e){images={}}
-try{deckCounts=JSON.parse(localStorage.getItem('marineTrickDeckV2')||'{}')}catch(e){deckCounts={}}
+try{const x=localStorage.getItem('marineTrickImagesV2');if(x)images=JSON.parse(x)}catch(e){}
+try{const x=localStorage.getItem('marineTrickDeckV2');if(x)deckCounts=JSON.parse(x)}catch(e){}
 CARD_POOL.forEach(c=>{if(deckCounts[c.code]==null)deckCounts[c.code]=c.defaultCount});
 
 let adminOpen=false;
@@ -183,6 +185,20 @@ function resetAdmin(){
  CARD_POOL=JSON.parse(JSON.stringify(DEFAULT_CARD_POOL));deckCounts={};CARD_POOL.forEach(c=>deckCounts[c.code]=c.defaultCount);
  localStorage.removeItem('marineTrickCardPoolV6');localStorage.removeItem('marineTrickAdminRulesV3');localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));
  renderEditor();renderAdmin();
+}
+
+
+function exportEmbeddedHTML(){
+ try{
+   const state={cardPool:CARD_POOL,images:images,deckCounts:deckCounts,deckSize:deckSize};
+   let json=JSON.stringify(state).replace(/<\/script/gi,'<\\/script');
+   let html=document.documentElement.outerHTML;
+   html=html.replace(/\/\*__EMBEDDED_STATE_START__\*\/[\s\S]*?\/\*__EMBEDDED_STATE_END__\*\//,`/*__EMBEDDED_STATE_START__*/ ${json} /*__EMBEDDED_STATE_END__*/`);
+   html='<!DOCTYPE html>\n'+html;
+   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='MARINE_TRICK_embedded.html';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+   alert('画像・設定を埋め込んだHTMLを書き出しました。');
+ }catch(e){alert('書き出しに失敗しました：'+e.message)}
 }
 
 function cardDesc(c){if(c.type==='char')return `キャラ / HP${c.hp} / 通常${c.atk}${c.recoil?' / 反動'+c.recoil:''}${c.heal?' / 自分+'+c.heal:''}`;if(c.dmg)return `${c.type==='triple'?'3人技':'2人技'} / ${c.dmg}ダメージ`;return `サポート / ${c.text}`}
