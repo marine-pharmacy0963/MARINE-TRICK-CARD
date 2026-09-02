@@ -51,6 +51,15 @@ body.master-build #adminPanel{display:block!important}
 .cardFoldBody{display:none;padding:10px 12px}
 .cardFoldRow.open .cardFoldBody{display:grid;grid-template-columns:minmax(190px,1fr) auto;gap:8px}
 </style>
+
+<style id="effectFoldStyle">
+.effectFold{border:1px solid #d9e8ef;border-radius:9px;margin:6px 0;background:#fbfdfe;overflow:hidden}
+.effectFold>summary{cursor:pointer;list-style:none;padding:7px 9px;font-weight:900;color:#315d72;background:#f3f9fc}
+.effectFold>summary::-webkit-details-marker{display:none}
+.effectFold>summary:before{content:"▶";display:inline-block;font-size:10px;margin-right:6px;transition:.15s}
+.effectFold[open]>summary:before{transform:rotate(90deg)}
+.effectFoldBody{padding:7px 9px}
+</style>
 </head><body class="master-build">
 <div id="masterGate"><div class="gatebox"><h1>🌊 MARINE TRICK</h1><div class="masterTitle">MASTER 管理画面</div><p class="masterLead">全カードをここで管理し、正式公開用 index.html と試作用 test.html をそれぞれ書き出します。</p><input id="masterPw" type="password" inputmode="numeric" placeholder="管理パスワード" onkeydown="if(event.key==='Enter')unlockMaster()"><br><button onclick="unlockMaster()" style="margin-top:10px">管理画面を開く</button><p class="small" id="masterGateMsg"></p></div></div>
 <header><h1 id="gameTitleText">🌊 MARINE TRICK</h1><img id="gameTitleLogo" class="logoImg hidden" alt="MARINE TRICK ロゴ"><div class="sub">属性✊✌️✋・自由/指定合体・生贄技・効果カスタム</div><div class="stats"><span class="pill" id="who">準備中</span><span class="pill" id="round">-</span><span class="pill" id="score">-</span><span class="pill" id="counts">-</span><span class="pill" id="difficultyPill">-</span></div></header>
@@ -263,7 +272,7 @@ function effectEditor(prefix,effects=[]){let rows=[0,1,2,3,4].map((i)=>{let e=ef
  <option value="fixed" ${(e.predictionMode||'fixed')==='fixed'?'selected':''}>○回中の成功数</option>
  <option value="streak" ${e.predictionMode==='streak'?'selected':''}>外すまで連続</option>
  <option value="risk" ${e.predictionMode==='risk'?'selected':''}>続ける/やめる・外したら0</option>
- </select> 最大/固定回数 <input id="${prefix}_predcount_${i}" type="number" min="1" max="20" value="${e.predictionCount||3}" style="width:52px"></span></div>`}).join('');return `<div style="margin-top:6px"><b>✨ 追加効果</b>${rows}<div class="small">各効果ごとにHP条件を設定できます。％条件は最大HPに対する割合です。合体技は参加キャラのうち1体でも条件を満たせば発動します。サポートは味方のうち1体で判定します。</div><div class="small">継続ダメージ/回復は「数値」と「ターン」を使用。同じ種類・同じ数値だけ残りターンを上書きし、別の状態異常は状態異常中は無効です。</div></div>`}
+ </select> 最大/固定回数 <input id="${prefix}_predcount_${i}" type="number" min="1" max="20" value="${e.predictionCount||3}" style="width:52px"></span></div>`}).join('');let hasEffect=(effects||[]).some(e=>e&&e.type&&e.type!=='none');return `<details class="effectFold" ${hasEffect?'open':''}><summary>✨ 追加効果${hasEffect?'（設定あり）':''}</summary><div class="effectFoldBody">${rows}<div class="small">各効果ごとにHP条件を設定できます。％条件は最大HPに対する割合です。合体技は参加キャラのうち1体でも条件を満たせば発動します。サポートは味方のうち1体で判定します。</div><div class="small">継続ダメージ/回復は「数値」と「ターン」を使用。同じ種類・同じ数値だけ残りターンを上書きし、別の状態異常は状態異常中は無効です。</div></div></details>`}
 function readEffects(prefix){return [0,1,2,3,4].map(i=>({type:document.getElementById(`${prefix}_eff_${i}`)?.value||'none',value:Math.max(0,Number(document.getElementById(`${prefix}_val_${i}`)?.value)||0),turns:Math.max(0,Number(document.getElementById(`${prefix}_turn_${i}`)?.value)||0),condition:document.getElementById(`${prefix}_cond_${i}`)?.value||'always',conditionValue:Math.max(0,Number(document.getElementById(`${prefix}_condval_${i}`)?.value)||0),predictionMode:document.getElementById(`${prefix}_predmode_${i}`)?.value||'fixed',predictionCount:Math.max(1,Number(document.getElementById(`${prefix}_predcount_${i}`)?.value)||3)})).filter(e=>e.type!=='none')}
 function attrSelect(id,val='rock'){return `<select id="${id}">${Object.entries(ATTRS).map(([k,v])=>`<option value="${k}" ${val===k?'selected':''}>${v}</option>`).join('')}</select>`}
 const AUTO_WEAKNESS={rock:'paper',scissors:'rock',paper:'scissors'};
