@@ -490,7 +490,7 @@ async function importMarineDataFile(file){
    CARD_POOL=nextPool;images=nextImages;deckCounts=nextDeckCounts;deckSize=Number(d.deckSize||20);GAME_RULES=nextRules;BRANDING=nextBranding;REWARD_CONFIG=nextReward;cardRelease=nextRelease;publishCodes={};
    CARD_POOL.forEach(c=>{if(deckCounts[c.code]==null)deckCounts[c.code]=Number(c.defaultCount||0);if(cardRelease[c.code]==null)cardRelease[c.code]='public';publishCodes[c.code]=cardRelease[c.code]==='public';});
    try{localStorage.setItem('marineTrickCardPoolV6',JSON.stringify(CARD_POOL));localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));localStorage.setItem('marineTrickImagesV2',JSON.stringify(images));localStorage.setItem('marineTrickDeckSizeV2',String(deckSize));localStorage.setItem('marineTrickGameRulesV1',JSON.stringify(GAME_RULES));localStorage.setItem('marineTrickCardReleaseV1',JSON.stringify(cardRelease));localStorage.setItem('marineTrickRewardConfigV1',JSON.stringify(REWARD_CONFIG));localStorage.setItem(MT_BRAND_KEY,JSON.stringify(BRANDING));}catch(storageErr){console.warn('localStorage保存はスキップ:',storageErr)}
-   applyBranding();updateDeckSizeUI();renderAdmin();renderDeckEditor();validateDeck();
+   applyBranding();updateDeckSizeUI();renderAdmin();renderEditor();validateDeck();
    if(st)st.textContent=`読み込み完了：${CARD_POOL.length}種類 / 画像${Object.keys(images).length}枚`;
    alert('🌊 marine-data.json を読み込みました。');
  }catch(e){console.error(e);if(st)st.textContent='読み込み失敗：'+e.message;alert('データ読み込みに失敗しました：'+e.message)}
