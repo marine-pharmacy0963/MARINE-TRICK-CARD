@@ -466,13 +466,34 @@ function mtDownloadText(text,filename,type='application/json;charset=utf-8'){
 function exportMarineDataFile(){
  try{const state=mtCurrentDataState();mtDownloadText(JSON.stringify(state),'marine-data.json','application/json;charset=utf-8');const e=document.getElementById('mtDataStatus');if(e)e.textContent='保存しました：marine-data.json';}catch(e){alert('データ保存に失敗しました：'+e.message)}
 }
-function importMarineDataFile(file){
- if(!file)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(String(rd.result||''));if(!Array.isArray(d.cardPool)||!d.cardPool.length)throw new Error('カードデータが見つかりません');
- CARD_POOL=JSON.parse(JSON.stringify(d.cardPool));images=JSON.parse(JSON.stringify(d.images||{}));deckCounts=JSON.parse(JSON.stringify(d.deckCounts||{}));deckSize=Number(d.deckSize||20);GAME_RULES=JSON.parse(JSON.stringify(d.gameRules||GAME_RULES));BRANDING=JSON.parse(JSON.stringify(d.branding||{logo:''}));REWARD_CONFIG=JSON.parse(JSON.stringify(d.rewardConfig||{}));cardRelease=JSON.parse(JSON.stringify(d.cardRelease||{}));publishCodes={};
- CARD_POOL.forEach(c=>{if(deckCounts[c.code]==null)deckCounts[c.code]=Number(c.defaultCount||0);if(cardRelease[c.code]==null)cardRelease[c.code]='public';publishCodes[c.code]=cardRelease[c.code]==='public';});
- try{localStorage.setItem('marineTrickCardPoolV6',JSON.stringify(CARD_POOL));localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));localStorage.setItem('marineTrickImagesV2',JSON.stringify(images));localStorage.setItem('marineTrickDeckSizeV2',String(deckSize));localStorage.setItem('marineTrickGameRulesV1',JSON.stringify(GAME_RULES));localStorage.setItem('marineTrickCardReleaseV1',JSON.stringify(cardRelease));localStorage.setItem('marineTrickRewardConfigV1',JSON.stringify(REWARD_CONFIG));localStorage.setItem(MT_BRAND_KEY,JSON.stringify(BRANDING));}catch(e){}
- applyBranding();updateDeckSizeUI();renderAdmin();renderDeckEditor();validateDeck();const st=document.getElementById('mtDataStatus');if(st)st.textContent=`読み込み完了：${CARD_POOL.length}種類 / 画像${Object.keys(images).length}枚`;alert('🌊 marine-data.json を読み込みました。');
- }catch(e){alert('データ読み込みに失敗しました：'+e.message)}};rd.readAsText(file,'utf-8');
+async function importMarineDataFile(file){
+ if(!file)return;
+ const st=document.getElementById('mtDataStatus');
+ try{
+   if(st)st.textContent='読み込み中…';
+   let text='';
+   if(typeof file.text==='function') text=await file.text();
+   else text=await new Promise((resolve,reject)=>{const rd=new FileReader();rd.onload=()=>resolve(String(rd.result||''));rd.onerror=()=>reject(rd.error||new Error('ファイルを読み取れません'));rd.readAsText(file,'utf-8')});
+   text=String(text||'').replace(/^\uFEFF/,'').trim();
+   if(!text)throw new Error('ファイルの中身が空です');
+   let d;
+   try{d=JSON.parse(text)}catch(parseErr){throw new Error('JSONの解析に失敗しました（'+parseErr.message+'）')}
+   if(!d||typeof d!=='object')throw new Error('MARINE TRICKデータではありません');
+   if(!Array.isArray(d.cardPool)||!d.cardPool.length)throw new Error('カードデータが見つかりません');
+   const nextPool=JSON.parse(JSON.stringify(d.cardPool));
+   const nextImages=JSON.parse(JSON.stringify(d.images||{}));
+   const nextDeckCounts=JSON.parse(JSON.stringify(d.deckCounts||{}));
+   const nextRules=JSON.parse(JSON.stringify(d.gameRules||GAME_RULES));
+   const nextBranding=JSON.parse(JSON.stringify(d.branding||BRANDING||{logo:''}));
+   const nextReward=JSON.parse(JSON.stringify(d.rewardConfig||REWARD_CONFIG||{}));
+   const nextRelease=JSON.parse(JSON.stringify(d.cardRelease||{}));
+   CARD_POOL=nextPool;images=nextImages;deckCounts=nextDeckCounts;deckSize=Number(d.deckSize||20);GAME_RULES=nextRules;BRANDING=nextBranding;REWARD_CONFIG=nextReward;cardRelease=nextRelease;publishCodes={};
+   CARD_POOL.forEach(c=>{if(deckCounts[c.code]==null)deckCounts[c.code]=Number(c.defaultCount||0);if(cardRelease[c.code]==null)cardRelease[c.code]='public';publishCodes[c.code]=cardRelease[c.code]==='public';});
+   try{localStorage.setItem('marineTrickCardPoolV6',JSON.stringify(CARD_POOL));localStorage.setItem('marineTrickDeckV2',JSON.stringify(deckCounts));localStorage.setItem('marineTrickImagesV2',JSON.stringify(images));localStorage.setItem('marineTrickDeckSizeV2',String(deckSize));localStorage.setItem('marineTrickGameRulesV1',JSON.stringify(GAME_RULES));localStorage.setItem('marineTrickCardReleaseV1',JSON.stringify(cardRelease));localStorage.setItem('marineTrickRewardConfigV1',JSON.stringify(REWARD_CONFIG));localStorage.setItem(MT_BRAND_KEY,JSON.stringify(BRANDING));}catch(storageErr){console.warn('localStorage保存はスキップ:',storageErr)}
+   applyBranding();updateDeckSizeUI();renderAdmin();renderDeckEditor();validateDeck();
+   if(st)st.textContent=`読み込み完了：${CARD_POOL.length}種類 / 画像${Object.keys(images).length}枚`;
+   alert('🌊 marine-data.json を読み込みました。');
+ }catch(e){console.error(e);if(st)st.textContent='読み込み失敗：'+e.message;alert('データ読み込みに失敗しました：'+e.message)}
 }
 function exportLeanMasterHTML(){
  if(adminOpen)saveAdminForExport();
