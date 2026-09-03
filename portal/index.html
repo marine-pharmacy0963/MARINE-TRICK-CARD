@@ -1,0 +1,28 @@
+🌊 MARINE PORTAL MASTER
+MASTER更新：2026/09/03 10:08
+⚠️ 公開版の注意事項
+注意事項は公開ページのロゴ直下、お知らせ・メニューより上に固定しています。
+🎨 背景・ロゴ
+背景画像
+
+横長ロゴ
+
+📢 お知らせ
+本文新しいコンテンツや更新情報をここに掲載できます！日付・補足更新情報は随時追加します
+🔗 メニュー
+名前・説明・リンク・アイコンを自由に変更できます。行の追加も可能です。
+
+＋ メニューを追加
+📦 書き出し
+公開用 index.html を書き出す
+背景・ロゴ画像もHTML内へ埋め込むので、index.html 1ファイルで動きます。
+\n'; let bg="",logo=""; let menus=[ {icon:"🧠",name:"クイズ",desc:"海・健康・お薬などのクイズに挑戦",href:"quiz.html"}, {icon:"🃏",name:"MARINE TRICK",desc:"カードを組んで対戦しよう",href:"card.html"}, {icon:"🐚",name:"コレクション",desc:"集めたキャラクターやカードを確認",href:"collection.html"}, {icon:"💊",name:"服薬チェック",desc:"毎日の服薬をブラウザに記録",href:"check.html"}, {icon:"🐠",name:"アイコン選択",desc:"お気に入りのキャラクターを選択",href:"icon.html"} ]; function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&","<":"<",">":">",'"':""","'":"'"}[c]))} function renderMenus(){document.getElementById("menuEditor").innerHTML=menus.map((m,i)=>`
+${esc(m.icon)}
+${esc(m.name)}
+${esc(m.desc)}
+削除
+${esc(m.href)}
+`).join("")} function addMenu(){menus.push({icon:"🌊",name:"新しいコンテンツ",desc:"説明を入力",href:"#"});renderMenus()} function loadImage(file,cb,prev){if(!file)return;const r=new FileReader();r.onload=()=>{cb(r.result);document.getElementById(prev).innerHTML=``};r.readAsDataURL(file)} document.getElementById("bgFile").onchange=e=>loadImage(e.target.files[0],v=>bg=v,"bgPrev"); document.getElementById("logoFile").onchange=e=>loadImage(e.target.files[0],v=>logo=v,"logoPrev"); function exportIndex(){ const menu=menus.map(m=>`
+${esc(m.icon)}
+${esc(m.name)}${esc(m.desc)}
+`).join("\n"); let html=PUBLIC_TEMPLATE .replace("__LOGO__",logo) .replace("__FALLBACK_STYLE__",logo?"display:none":"") .replace("__NEWS__",esc(document.getElementById("news").value)) .replace("__NEWS_DATE__",esc(document.getElementById("newsDate").value)) .replace("__MENU__",menu) .replace("__BG_JSON__",JSON.stringify(bg)); const blob=new Blob([html],{type:"text/html;charset=utf-8"}),a=document.createElement("a"); a.href=URL.createObjectURL(blob);a.download="index.html";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000); } renderMenus();
